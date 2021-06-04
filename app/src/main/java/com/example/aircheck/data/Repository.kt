@@ -3,6 +3,7 @@ package com.example.aircheck.data
 import com.example.aircheck.BuildConfig
 import com.example.aircheck.data.services.AirKoreaApiService
 import com.example.aircheck.data.services.KakaoLocalApiService
+import com.example.aircheck.model.airquality.MeasuredValue
 import com.example.aircheck.model.monitoringstation.MonitoringStation
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -33,6 +34,17 @@ object Repository {
 
 
     }
+
+    suspend fun getLatestAirQualityData(stationName : String) : MeasuredValue? =
+        airKoreaApiService
+            .getRealtimeAirQualities(stationName)
+            .body()
+            ?.response
+            ?.body
+            ?.measuredValues
+            ?.firstOrNull()
+
+
 
     private val kakaoLocalApiService : KakaoLocalApiService by lazy{
         Retrofit.Builder()
