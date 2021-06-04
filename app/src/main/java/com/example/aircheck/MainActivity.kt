@@ -6,19 +6,24 @@ import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.app.ActivityCompat
+import com.example.aircheck.data.Repository
 import com.example.aircheck.databinding.ActivityMainBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 
 import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var binding : ActivityMainBinding
+    lateinit var binding: ActivityMainBinding
+    private val scope = MainScope()
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-    private var cancellationTokenSource : CancellationTokenSource? = null
+    private var cancellationTokenSource: CancellationTokenSource? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -34,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @SuppressLint("MissingPermission")
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -46,28 +51,19 @@ class MainActivity : AppCompatActivity() {
             requestCode == REQUEST_ACCESS_LOCATION_PERMISSIONS &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED
 
-        if(!locationPermissionGranted){
+        if (!locationPermissionGranted) {
             finish()
-        }else{
-            //fetchData
-                cancellationTokenSource = CancellationTokenSource()
-
-            fusedLocationProviderClient.getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY,
-                cancellationTokenSource!!.token
-            ).addOnSuccessListener { location ->
-
-                binding.textView.text = "${ location.latitude }, ${location.longitude}"
-            }
-
+        } else {
+            fetchAirQualityData()
         }
     }
 
-    private fun initVariables(){
+    private fun initVariables() {
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
-    private fun requestLocationPermissions(){
+    private fun requestLocationPermissions() {
         ActivityCompat.requestPermissions(
             this,
             arrayOf(
@@ -79,13 +75,36 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    @SuppressLint("MissingPermission")
+    private fun fetchAirQualityData() {
+
+        //fetchData
+        cancellationTokenSource = CancellationTokenSource()
+
+        fusedLocationProviderClient.getCurrentLocation(
+            LocationRequest.PRIORITY_HIGH_ACCURACY,
+            cancellationTokenSource!!.token
+        ).addOnSuccessListener { location ->
+
+            scope.launch {
+
+             val monitoringStation =   Repository.getNearbyMonitoringStation(location.latitude,location.longitude)
+
+                binding.textView.text = monitoringStation?.stationName
+
+            }
+
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         cancellationTokenSource?.cancel()
+        scope.cancel()
     }
 
 
-    companion object{
+    companion object {
         private const val REQUEST_ACCESS_LOCATION_PERMISSIONS = 100
     }
 }
