@@ -40,10 +40,7 @@ class MainActivity : AppCompatActivity() {
         initVariables()
         requestLocationPermissions()
 
-
     }
-
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
